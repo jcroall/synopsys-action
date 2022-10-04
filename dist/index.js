@@ -1,733 +1,7 @@
-require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
+/******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 293:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.APPLICATION_NAME = exports.SYNOPSYS_BRIDGE_DEFAULT_PATH_LINUX = exports.SYNOPSYS_BRIDGE_DEFAULT_PATH_WINDOWS = exports.SYNOPSYS_BRIDGE_DEFAULT_PATH_MAC = void 0;
-exports.SYNOPSYS_BRIDGE_DEFAULT_PATH_MAC = '/synopsys-bridge'; //Path will be in home
-exports.SYNOPSYS_BRIDGE_DEFAULT_PATH_WINDOWS = '\\synopsys-bridge';
-exports.SYNOPSYS_BRIDGE_DEFAULT_PATH_LINUX = '/usr/synopsys-bridge';
-exports.APPLICATION_NAME = 'synopsys-action';
-
-
-/***/ }),
-
-/***/ 109:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.run = void 0;
-const core_1 = __nccwpck_require__(186);
-const tools_parameter_1 = __nccwpck_require__(80);
-const utility_1 = __nccwpck_require__(643);
-const synopsys_bridge_1 = __nccwpck_require__(659);
-const inputs = __importStar(__nccwpck_require__(481));
-const config_variables_1 = __nccwpck_require__(222);
-const download_utility_1 = __nccwpck_require__(55);
-const io_1 = __nccwpck_require__(436);
-function run() {
-    return __awaiter(this, void 0, void 0, function* () {
-        (0, core_1.info)('Synopsys Action started...');
-        const tempDir = yield (0, utility_1.createTempDir)();
-        let formattedCommand = '';
-        try {
-            // Automatically configure bridge if Bridge download url is provided
-            if (inputs.BRIDGE_DOWNLOAD_URL) {
-                if (!(0, synopsys_bridge_1.validateBridgeURL)(inputs.BRIDGE_DOWNLOAD_URL)) {
-                    return Promise.reject('Provided Bridge url is either not valid for the platform');
-                }
-                // Download file in temporary directory
-                (0, core_1.info)('Downloading and configuring Synopsys Bridge');
-                const downloadResponse = yield (0, download_utility_1.getRemoteFile)(tempDir, inputs.BRIDGE_DOWNLOAD_URL);
-                const extractZippedFilePath = inputs.SYNOPSYS_BRIDGE_PATH || (0, synopsys_bridge_1.getBridgeDefaultPath)();
-                // Clear the existing bridge, if available
-                yield (0, io_1.rmRF)(extractZippedFilePath);
-                yield (0, download_utility_1.extractZipped)(downloadResponse.filePath, extractZippedFilePath);
-                (0, core_1.info)('Download and configuration of Synopsys Bridge completed');
-            }
-            if (inputs.POLARIS_SERVER_URL) {
-                const polarisCommandFormatter = new tools_parameter_1.SynopsysToolsParameter(tempDir);
-                const polarisAssessmentTypes = JSON.parse(inputs.POLARIS_ASSESSMENT_TYPES);
-                formattedCommand = polarisCommandFormatter.getFormattedCommandForPolaris(inputs.POLARIS_ACCESS_TOKEN, inputs.POLARIS_APPLICATION_NAME, inputs.POLARIS_PROJECT_NAME, inputs.POLARIS_SERVER_URL, polarisAssessmentTypes);
-                (0, core_1.debug)('Formatted command is - '.concat(formattedCommand));
-            }
-            else if (inputs.COVERITY_URL) {
-                const coverityCommandFormatter = new tools_parameter_1.SynopsysToolsParameter(tempDir);
-                formattedCommand = coverityCommandFormatter.getFormattedCommandForCoverity(inputs.COVERITY_USER, inputs.COVERITY_PASSPHRASE, inputs.COVERITY_URL, inputs.COVERITY_PROJECT_NAME, inputs.COVERITY_STREAM_NAME, inputs.COVERITY_INSTALL_DIRECTORY, inputs.COVERITY_POLICY_VIEW, inputs.COVERITY_REPOSITORY_NAME, inputs.COVERITY_BRANCH_NAME);
-            }
-            else if (inputs.BLACKDUCK_URL) {
-                const blackDuckCommandFormatter = new tools_parameter_1.SynopsysToolsParameter(tempDir);
-                let failureSeverities = [];
-                if (inputs.BLACKDUCK_SCAN_FAILURE_SEVERITIES != null && inputs.BLACKDUCK_SCAN_FAILURE_SEVERITIES.length > 0) {
-                    try {
-                        failureSeverities = JSON.parse(inputs.BLACKDUCK_SCAN_FAILURE_SEVERITIES);
-                    }
-                    catch (error) {
-                        return Promise.reject('Provided value is not valid - BLACKDUCK_SCAN_FAILURE_SEVERITIES');
-                    }
-                }
-                formattedCommand = blackDuckCommandFormatter.getFormattedCommandForBlackduck(inputs.BLACKDUCK_URL, inputs.BLACKDUCK_API_TOKEN, inputs.BLACKDUCK_INSTALL_DIRECTORY, inputs.BLACKDUCK_SCAN_FULL, failureSeverities);
-            }
-            else {
-                (0, core_1.warning)('Not supported flow');
-                return Promise.reject(new Error('Not Supported Flow'));
-            }
-        }
-        catch (error) {
-            (0, core_1.debug)(error.stackTrace);
-            return Promise.reject(error);
-        }
-        try {
-            const sb = new synopsys_bridge_1.SynopsysBridge();
-            yield sb.executeBridgeCommand(formattedCommand, (0, config_variables_1.getWorkSpaceDirectory)()).catch(reason => {
-                throw reason;
-            });
-        }
-        catch (error) {
-            return Promise.reject(error);
-        }
-        finally {
-            yield (0, utility_1.cleanupTempDir)(tempDir);
-        }
-    });
-}
-exports.run = run;
-run().catch(error => {
-    (0, core_1.setFailed)('Workflow failed! '.concat(error.message));
-});
-
-
-/***/ }),
-
-/***/ 55:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.extractZipped = exports.getRemoteFile = void 0;
-const core_1 = __nccwpck_require__(186);
-const path_1 = __importDefault(__nccwpck_require__(622));
-const tool_cache_1 = __nccwpck_require__(784);
-const fs = __importStar(__nccwpck_require__(747));
-const utility_1 = __nccwpck_require__(643);
-const exec_1 = __nccwpck_require__(514);
-function getRemoteFile(destFilePath, url) {
-    return __awaiter(this, void 0, void 0, function* () {
-        if (url == null || url.length === 0) {
-            return Promise.reject(new Error('URL cannot be empty'));
-        }
-        try {
-            let fileNameFromUrl = '';
-            if (fs.lstatSync(destFilePath).isDirectory()) {
-                fileNameFromUrl = url.substring(url.lastIndexOf('/') + 1);
-                destFilePath = path_1.default.join(destFilePath, fileNameFromUrl);
-            }
-            const toolPath = yield (0, tool_cache_1.downloadTool)(url, destFilePath);
-            const downloadFileResp = {
-                filePath: toolPath,
-                fileName: fileNameFromUrl
-            };
-            return Promise.resolve(downloadFileResp);
-        }
-        catch (error) {
-            return Promise.reject(error);
-        }
-    });
-}
-exports.getRemoteFile = getRemoteFile;
-function extractZipped(file, destinationPath) {
-    return __awaiter(this, void 0, void 0, function* () {
-        if (file == null || file.length === 0) {
-            return Promise.reject(new Error('File does not exist'));
-        }
-        //Extract file name from file with full path
-        if (destinationPath == null || destinationPath.length === 0) {
-            return Promise.reject(new Error('No destination directory found'));
-        }
-        try {
-            if ((0, utility_1.checkIfGithubHostedAndLinux)()) {
-                yield (0, exec_1.exec)('sudo unzip '.concat(file).concat(' -d ').concat(destinationPath));
-            }
-            else {
-                yield (0, tool_cache_1.extractZip)(file, destinationPath);
-            }
-            (0, core_1.info)('Extraction complete.');
-            return Promise.resolve(true);
-        }
-        catch (error) {
-            return Promise.reject(error);
-        }
-    });
-}
-exports.extractZipped = extractZipped;
-
-
-/***/ }),
-
-/***/ 481:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.BLACKDUCK_SCAN_FAILURE_SEVERITIES = exports.BLACKDUCK_SCAN_FULL = exports.BLACKDUCK_INSTALL_DIRECTORY = exports.BLACKDUCK_API_TOKEN = exports.BLACKDUCK_URL = exports.COVERITY_BRANCH_NAME = exports.COVERITY_REPOSITORY_NAME = exports.COVERITY_POLICY_VIEW = exports.COVERITY_INSTALL_DIRECTORY = exports.COVERITY_STREAM_NAME = exports.COVERITY_PROJECT_NAME = exports.COVERITY_PASSPHRASE = exports.COVERITY_USER = exports.COVERITY_URL = exports.POLARIS_SERVER_URL = exports.POLARIS_ASSESSMENT_TYPES = exports.POLARIS_PROJECT_NAME = exports.POLARIS_APPLICATION_NAME = exports.POLARIS_ACCESS_TOKEN = exports.BRIDGE_DOWNLOAD_URL = exports.SYNOPSYS_BRIDGE_PATH = void 0;
-const core_1 = __nccwpck_require__(186);
-exports.SYNOPSYS_BRIDGE_PATH = (0, core_1.getInput)('synopsys_bridge_path');
-//Bridge download url
-exports.BRIDGE_DOWNLOAD_URL = (0, core_1.getInput)('bridge_download_url');
-// Polaris related inputs
-exports.POLARIS_ACCESS_TOKEN = (0, core_1.getInput)('polaris_accessToken');
-exports.POLARIS_APPLICATION_NAME = (0, core_1.getInput)('polaris_application_name');
-exports.POLARIS_PROJECT_NAME = (0, core_1.getInput)('polaris_project_name');
-exports.POLARIS_ASSESSMENT_TYPES = (0, core_1.getInput)('polaris_assessment_types');
-exports.POLARIS_SERVER_URL = (0, core_1.getInput)('polaris_serverUrl');
-// Coverity related inputs
-exports.COVERITY_URL = (0, core_1.getInput)('coverity_url');
-exports.COVERITY_USER = (0, core_1.getInput)('coverity_user');
-exports.COVERITY_PASSPHRASE = (0, core_1.getInput)('coverity_passphrase');
-exports.COVERITY_PROJECT_NAME = (0, core_1.getInput)('coverity_project_name');
-exports.COVERITY_STREAM_NAME = (0, core_1.getInput)('coverity_stream_name');
-exports.COVERITY_INSTALL_DIRECTORY = (0, core_1.getInput)('coverity_install_directory');
-exports.COVERITY_POLICY_VIEW = (0, core_1.getInput)('coverity_policy_view');
-exports.COVERITY_REPOSITORY_NAME = (0, core_1.getInput)('coverity_repository_name');
-exports.COVERITY_BRANCH_NAME = (0, core_1.getInput)('coverity_branch_name');
-// Blackduck related inputs
-exports.BLACKDUCK_URL = (0, core_1.getInput)('blackduck_url');
-exports.BLACKDUCK_API_TOKEN = (0, core_1.getInput)('blackduck_apiToken');
-exports.BLACKDUCK_INSTALL_DIRECTORY = (0, core_1.getInput)('blackduck_install_directory');
-exports.BLACKDUCK_SCAN_FULL = (0, core_1.getInput)('blackduck_scan_full');
-exports.BLACKDUCK_SCAN_FAILURE_SEVERITIES = (0, core_1.getInput)('blackduck_scan_failure_severities');
-
-
-/***/ }),
-
-/***/ 659:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.validateBridgeURL = exports.getBridgeDefaultPath = exports.SynopsysBridge = void 0;
-const exec_1 = __nccwpck_require__(514);
-const inputs_1 = __nccwpck_require__(481);
-const core_1 = __nccwpck_require__(186);
-const application_constants_1 = __nccwpck_require__(293);
-const io_util_1 = __nccwpck_require__(962);
-const path_1 = __importDefault(__nccwpck_require__(622));
-const utility_1 = __nccwpck_require__(643);
-class SynopsysBridge {
-    constructor() {
-        this.bridgeExecutablePath = '';
-    }
-    checkIfSynopsysBridgeExists() {
-        return __awaiter(this, void 0, void 0, function* () {
-            let synopsysBridgePath = inputs_1.SYNOPSYS_BRIDGE_PATH;
-            const osName = process.platform;
-            if (!synopsysBridgePath) {
-                (0, core_1.info)('Synopsys Bridge path not found in configuration');
-                (0, core_1.info)('Looking for synopsys bridge in default path');
-                synopsysBridgePath = getBridgeDefaultPath();
-            }
-            if (osName === 'win32') {
-                this.bridgeExecutablePath = yield (0, io_util_1.tryGetExecutablePath)(synopsysBridgePath.concat('\\bridge'), ['.exe']);
-            }
-            else {
-                this.bridgeExecutablePath = yield (0, io_util_1.tryGetExecutablePath)(synopsysBridgePath.concat('/bridge'), []);
-            }
-            if (this.bridgeExecutablePath) {
-                (0, core_1.debug)('Bridge executable found at '.concat(synopsysBridgePath));
-                return true;
-            }
-            else {
-                (0, core_1.info)('Bridge executable could not be found at '.concat(synopsysBridgePath));
-            }
-            return false;
-        });
-    }
-    executeBridgeCommand(bridgeCommand, workingDirectory) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (yield this.checkIfSynopsysBridgeExists()) {
-                const osName = process.platform;
-                if (osName === 'darwin' || osName === 'linux' || osName === 'win32') {
-                    const exectOp = {
-                        cwd: workingDirectory
-                    };
-                    try {
-                        if ((0, utility_1.checkIfGithubHostedAndLinux)()) {
-                            return yield (0, exec_1.exec)('sudo '.concat(this.bridgeExecutablePath.concat(' ', bridgeCommand)), [], exectOp);
-                        }
-                        return yield (0, exec_1.exec)(this.bridgeExecutablePath.concat(' ', bridgeCommand), [], exectOp);
-                    }
-                    catch (error) {
-                        throw error;
-                    }
-                }
-            }
-            else {
-                throw new Error('Bridge could not be found');
-            }
-            return -1;
-        });
-    }
-}
-exports.SynopsysBridge = SynopsysBridge;
-function getBridgeDefaultPath() {
-    let bridgeDefaultPath = '';
-    const osName = process.platform;
-    if (osName === 'darwin') {
-        bridgeDefaultPath = path_1.default.join(process.env['HOME'], application_constants_1.SYNOPSYS_BRIDGE_DEFAULT_PATH_MAC);
-    }
-    else if (osName === 'linux') {
-        bridgeDefaultPath = application_constants_1.SYNOPSYS_BRIDGE_DEFAULT_PATH_LINUX;
-    }
-    else if (osName === 'win32') {
-        bridgeDefaultPath = path_1.default.join(process.env['USERPROFILE'], application_constants_1.SYNOPSYS_BRIDGE_DEFAULT_PATH_WINDOWS);
-    }
-    return bridgeDefaultPath;
-}
-exports.getBridgeDefaultPath = getBridgeDefaultPath;
-function validateBridgeURL(url) {
-    const osName = process.platform;
-    if (osName === 'darwin') {
-        return url.toLowerCase().includes('mac');
-    }
-    else if (osName === 'linux') {
-        return url.toLowerCase().includes('linux');
-    }
-    else if (osName === 'win32') {
-        return url.toLowerCase().includes('win');
-    }
-    return false;
-}
-exports.validateBridgeURL = validateBridgeURL;
-
-
-/***/ }),
-
-/***/ 80:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.SynopsysToolsParameter = exports.BLACKDUCK_SCAN_FAILURE_SEVERITIES = exports.PolarisAssessmentType = void 0;
-const fs = __importStar(__nccwpck_require__(747));
-const path_1 = __importDefault(__nccwpck_require__(622));
-const core_1 = __nccwpck_require__(186);
-const validators_1 = __nccwpck_require__(401);
-var PolarisAssessmentType;
-(function (PolarisAssessmentType) {
-    PolarisAssessmentType["SCA"] = "SCA";
-    PolarisAssessmentType["SAST"] = "SAST";
-})(PolarisAssessmentType = exports.PolarisAssessmentType || (exports.PolarisAssessmentType = {}));
-var BLACKDUCK_SCAN_FAILURE_SEVERITIES;
-(function (BLACKDUCK_SCAN_FAILURE_SEVERITIES) {
-    BLACKDUCK_SCAN_FAILURE_SEVERITIES["ALL"] = "ALL";
-    BLACKDUCK_SCAN_FAILURE_SEVERITIES["NONE"] = "NONE";
-    BLACKDUCK_SCAN_FAILURE_SEVERITIES["BLOCKER"] = "BLOCKER";
-    BLACKDUCK_SCAN_FAILURE_SEVERITIES["CRITICAL"] = "CRITICAL";
-    BLACKDUCK_SCAN_FAILURE_SEVERITIES["MAJOR"] = "MAJOR";
-    BLACKDUCK_SCAN_FAILURE_SEVERITIES["MINOR"] = "MINOR";
-    BLACKDUCK_SCAN_FAILURE_SEVERITIES["OK"] = "OK";
-    BLACKDUCK_SCAN_FAILURE_SEVERITIES["TRIVIAL"] = "TRIVIAL";
-    BLACKDUCK_SCAN_FAILURE_SEVERITIES["UNSPECIFIED"] = "UNSPECIFIED";
-})(BLACKDUCK_SCAN_FAILURE_SEVERITIES = exports.BLACKDUCK_SCAN_FAILURE_SEVERITIES || (exports.BLACKDUCK_SCAN_FAILURE_SEVERITIES = {}));
-class SynopsysToolsParameter {
-    constructor(tempDir) {
-        this.tempDir = tempDir;
-    }
-    getFormattedCommandForPolaris(accessToken, applicationName, projectName, serverURL, assessmentTypes) {
-        (0, validators_1.validatePolarisParams)(accessToken, applicationName, projectName, serverURL, assessmentTypes);
-        const assessmentTypeEnums = [];
-        for (const assessmentType of assessmentTypes) {
-            if (!Object.values(PolarisAssessmentType).includes(assessmentType)) {
-                throw new Error('Provided Assessment type not found');
-            }
-            else {
-                assessmentTypeEnums.push(PolarisAssessmentType[assessmentType]);
-            }
-        }
-        const polData = {
-            data: {
-                polaris: {
-                    accesstoken: accessToken,
-                    serverUrl: serverURL,
-                    application: { name: applicationName },
-                    project: { name: projectName },
-                    assessment: { types: assessmentTypeEnums }
-                }
-            }
-        };
-        const inputJson = JSON.stringify(polData);
-        const stateFilePath = path_1.default.join(this.tempDir, SynopsysToolsParameter.STATE_FILE_NAME);
-        fs.writeFileSync(stateFilePath, inputJson);
-        (0, core_1.debug)('Generated state json file at - '.concat(stateFilePath));
-        (0, core_1.debug)('Generated state json file content is - '.concat(inputJson));
-        const command = SynopsysToolsParameter.STAGE_OPTION.concat(SynopsysToolsParameter.SPACE).concat(SynopsysToolsParameter.POLARIS_STAGE).concat(SynopsysToolsParameter.SPACE).concat(SynopsysToolsParameter.STATE_OPTION).concat(SynopsysToolsParameter.SPACE).concat(stateFilePath);
-        return command;
-    }
-    getFormattedCommandForCoverity(userName, passWord, coverityUrl, projectName, streamName, installDir, policyView, repositoryName, branchName) {
-        (0, validators_1.validateCoverityParams)(userName, passWord, coverityUrl, projectName, streamName);
-        const covData = {
-            data: {
-                coverity: {
-                    connect: {
-                        user: { name: userName, password: passWord },
-                        url: coverityUrl,
-                        project: { name: projectName },
-                        stream: { name: streamName }
-                    }
-                },
-                project: {}
-            }
-        };
-        if (installDir) {
-            const osName = process.platform;
-            if (osName === 'win32') {
-                (0, validators_1.validateCoverityInstallDirectoryParam)(installDir);
-            }
-            covData.data.coverity.install = { directory: installDir };
-        }
-        if (policyView) {
-            covData.data.coverity.connect.policy = { view: policyView };
-        }
-        if (repositoryName) {
-            covData.data.project.repository = { name: repositoryName };
-        }
-        if (repositoryName) {
-            covData.data.project.branch = { name: branchName };
-        }
-        const inputJson = JSON.stringify(covData);
-        const stateFilePath = path_1.default.join(this.tempDir, SynopsysToolsParameter.STATE_FILE_NAME);
-        fs.writeFileSync(stateFilePath, inputJson);
-        (0, core_1.debug)('Generated state json file at - '.concat(stateFilePath));
-        (0, core_1.debug)('Generated state json file content is - '.concat(inputJson));
-        const command = SynopsysToolsParameter.STAGE_OPTION.concat(SynopsysToolsParameter.SPACE).concat(SynopsysToolsParameter.COVERITY_STAGE).concat(SynopsysToolsParameter.SPACE).concat(SynopsysToolsParameter.STATE_OPTION).concat(SynopsysToolsParameter.SPACE).concat(stateFilePath).concat(SynopsysToolsParameter.SPACE).concat('--verbose'); //'--stage polaris --state '.concat(stateFilePath)
-        return command;
-    }
-    getFormattedCommandForBlackduck(blackduckUrl, apiToken, installDirectory, scanFull, failureSeverities) {
-        (0, validators_1.validateBalckduckParams)(blackduckUrl, apiToken, installDirectory);
-        const blackduckData = {
-            data: {
-                blackduck: {
-                    url: blackduckUrl,
-                    token: apiToken
-                }
-            }
-        };
-        if (installDirectory) {
-            blackduckData.data.blackduck.install = { directory: installDirectory };
-        }
-        if (scanFull) {
-            let scanFullValue = false;
-            if (scanFull.toLowerCase() === 'true' || scanFull.toLowerCase() === 'false') {
-                scanFullValue = scanFull.toLowerCase() === 'true';
-            }
-            else {
-                throw new Error('boolean value is required for blackduck_scan_full');
-            }
-            blackduckData.data.blackduck.scan = { full: scanFullValue };
-        }
-        if (failureSeverities && failureSeverities.length > 0) {
-            (0, validators_1.validateBlackduckFailureSeverities)(failureSeverities);
-            const failureSeverityEnums = [];
-            for (const failureSeverity of failureSeverities) {
-                if (!Object.values(BLACKDUCK_SCAN_FAILURE_SEVERITIES).includes(failureSeverity)) {
-                    throw new Error('Provided Severity for blackduck is not valid');
-                }
-                else {
-                    failureSeverityEnums.push(BLACKDUCK_SCAN_FAILURE_SEVERITIES[failureSeverity]);
-                }
-            }
-            if (blackduckData.data.blackduck.scan) {
-                blackduckData.data.blackduck.scan.failure = { severities: failureSeverityEnums };
-            }
-            else {
-                blackduckData.data.blackduck.scan = { failure: { severities: failureSeverityEnums } };
-            }
-        }
-        const inputJson = JSON.stringify(blackduckData);
-        const stateFilePath = path_1.default.join(this.tempDir, SynopsysToolsParameter.STATE_FILE_NAME);
-        fs.writeFileSync(stateFilePath, inputJson);
-        (0, core_1.debug)('Generated state json file at - '.concat(stateFilePath));
-        (0, core_1.debug)('Generated state json file content is - '.concat(inputJson));
-        const command = SynopsysToolsParameter.STAGE_OPTION.concat(SynopsysToolsParameter.SPACE).concat(SynopsysToolsParameter.BLACKDUCK_STAGE).concat(SynopsysToolsParameter.SPACE).concat(SynopsysToolsParameter.STATE_OPTION).concat(SynopsysToolsParameter.SPACE).concat(stateFilePath).concat(SynopsysToolsParameter.SPACE);
-        return command;
-    }
-}
-exports.SynopsysToolsParameter = SynopsysToolsParameter;
-SynopsysToolsParameter.STAGE_OPTION = '--stage';
-SynopsysToolsParameter.STATE_OPTION = '--state';
-SynopsysToolsParameter.POLARIS_STAGE = 'polaris';
-SynopsysToolsParameter.STATE_FILE_NAME = 'input.json';
-// Coverity parameters
-SynopsysToolsParameter.COVERITY_STAGE = 'connect';
-SynopsysToolsParameter.SPACE = ' ';
-// Balckduck parameters
-SynopsysToolsParameter.BLACKDUCK_STAGE = 'blackduck';
-
-
-/***/ }),
-
-/***/ 643:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.checkIfGithubHostedAndLinux = exports.cleanupTempDir = exports.createTempDir = exports.cleanUrl = void 0;
-const fs = __importStar(__nccwpck_require__(747));
-const os = __importStar(__nccwpck_require__(87));
-const path_1 = __importDefault(__nccwpck_require__(622));
-const application_constants_1 = __nccwpck_require__(293);
-const io_1 = __nccwpck_require__(436);
-function cleanUrl(url) {
-    if (url && url.endsWith('/')) {
-        return url.slice(0, url.length - 1);
-    }
-    return url;
-}
-exports.cleanUrl = cleanUrl;
-function createTempDir() {
-    return __awaiter(this, void 0, void 0, function* () {
-        const appPrefix = application_constants_1.APPLICATION_NAME;
-        const tempDir = fs.mkdtempSync(path_1.default.join(os.tmpdir(), appPrefix));
-        return tempDir;
-    });
-}
-exports.createTempDir = createTempDir;
-function cleanupTempDir(tempDir) {
-    return __awaiter(this, void 0, void 0, function* () {
-        if (tempDir && fs.existsSync(tempDir)) {
-            yield (0, io_1.rmRF)(tempDir);
-        }
-    });
-}
-exports.cleanupTempDir = cleanupTempDir;
-function checkIfGithubHostedAndLinux() {
-    return String(process.env['RUNNER_NAME']).includes('Hosted Agent') && (process.platform === 'linux' || process.platform === 'darwin');
-}
-exports.checkIfGithubHostedAndLinux = checkIfGithubHostedAndLinux;
-
-
-/***/ }),
-
-/***/ 401:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.validateBlackduckFailureSeverities = exports.validateBalckduckParams = exports.validateCoverityInstallDirectoryParam = exports.validateCoverityParams = exports.validatePolarisParams = void 0;
-const fs = __importStar(__nccwpck_require__(747));
-function validatePolarisParams(accessToken, applicationName, projectName, serverURL, assessmentTypes) {
-    if (accessToken == null || accessToken.length === 0 || applicationName == null || applicationName.length === 0 || projectName == null || projectName.length === 0 || serverURL == null || serverURL.length === 0 || assessmentTypes.length === 0) {
-        throw new Error('One or more required parameters for Altair is missing');
-    }
-}
-exports.validatePolarisParams = validatePolarisParams;
-function validateCoverityParams(userName, passWord, coverityUrl, projectName, streamName) {
-    if (userName == null || userName.length === 0 || passWord == null || passWord.length === 0 || coverityUrl == null || coverityUrl.length === 0 || projectName == null || projectName.length === 0 || streamName == null || streamName.length === 0) {
-        throw new Error('One or more required parameters for Coverity is missing');
-    }
-}
-exports.validateCoverityParams = validateCoverityParams;
-function validateCoverityInstallDirectoryParam(installDir) {
-    if (installDir == null || installDir.length === 0) {
-        throw new Error('One or more required parameters for Coverity is missing');
-    }
-    if (!fs.existsSync(installDir)) {
-        throw new Error('Invalid Install Directory');
-    }
-}
-exports.validateCoverityInstallDirectoryParam = validateCoverityInstallDirectoryParam;
-function validateBalckduckParams(url, apiToken, installDirectory) {
-    if (url == null || url.length === 0 || apiToken == null || apiToken.length === 0 || installDirectory == null || installDirectory.length === 0) {
-        throw new Error('One or more required parameters for Coverity is missing');
-    }
-}
-exports.validateBalckduckParams = validateBalckduckParams;
-function validateBlackduckFailureSeverities(severities) {
-    if (severities == null || severities.length === 0) {
-        throw new Error('Provided value is not valid - BLACKDUCK_SCAN_FAILURE_SEVERITIES');
-    }
-}
-exports.validateBlackduckFailureSeverities = validateBlackduckFailureSeverities;
-
-
-/***/ }),
-
-/***/ 222:
+/***/ 972:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -806,7 +80,7 @@ exports.getRetentionDays = getRetentionDays;
 
 /***/ }),
 
-/***/ 351:
+/***/ 272:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -832,8 +106,8 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.issue = exports.issueCommand = void 0;
-const os = __importStar(__nccwpck_require__(87));
-const utils_1 = __nccwpck_require__(278);
+const os = __importStar(__nccwpck_require__(37));
+const utils_1 = __nccwpck_require__(587);
 /**
  * Commands
  *
@@ -905,7 +179,7 @@ function escapeProperty(s) {
 
 /***/ }),
 
-/***/ 186:
+/***/ 26:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -940,12 +214,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getIDToken = exports.getState = exports.saveState = exports.group = exports.endGroup = exports.startGroup = exports.info = exports.notice = exports.warning = exports.error = exports.debug = exports.isDebug = exports.setFailed = exports.setCommandEcho = exports.setOutput = exports.getBooleanInput = exports.getMultilineInput = exports.getInput = exports.addPath = exports.setSecret = exports.exportVariable = exports.ExitCode = void 0;
-const command_1 = __nccwpck_require__(351);
-const file_command_1 = __nccwpck_require__(717);
-const utils_1 = __nccwpck_require__(278);
-const os = __importStar(__nccwpck_require__(87));
-const path = __importStar(__nccwpck_require__(622));
-const oidc_utils_1 = __nccwpck_require__(41);
+const command_1 = __nccwpck_require__(272);
+const file_command_1 = __nccwpck_require__(425);
+const utils_1 = __nccwpck_require__(587);
+const os = __importStar(__nccwpck_require__(37));
+const path = __importStar(__nccwpck_require__(17));
+const oidc_utils_1 = __nccwpck_require__(511);
 /**
  * The code to exit an action
  */
@@ -1223,17 +497,17 @@ exports.getIDToken = getIDToken;
 /**
  * Summary exports
  */
-var summary_1 = __nccwpck_require__(327);
+var summary_1 = __nccwpck_require__(800);
 Object.defineProperty(exports, "summary", ({ enumerable: true, get: function () { return summary_1.summary; } }));
 /**
  * @deprecated use core.summary
  */
-var summary_2 = __nccwpck_require__(327);
+var summary_2 = __nccwpck_require__(800);
 Object.defineProperty(exports, "markdownSummary", ({ enumerable: true, get: function () { return summary_2.markdownSummary; } }));
 /**
  * Path exports
  */
-var path_utils_1 = __nccwpck_require__(981);
+var path_utils_1 = __nccwpck_require__(519);
 Object.defineProperty(exports, "toPosixPath", ({ enumerable: true, get: function () { return path_utils_1.toPosixPath; } }));
 Object.defineProperty(exports, "toWin32Path", ({ enumerable: true, get: function () { return path_utils_1.toWin32Path; } }));
 Object.defineProperty(exports, "toPlatformPath", ({ enumerable: true, get: function () { return path_utils_1.toPlatformPath; } }));
@@ -1241,7 +515,7 @@ Object.defineProperty(exports, "toPlatformPath", ({ enumerable: true, get: funct
 
 /***/ }),
 
-/***/ 717:
+/***/ 425:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -1270,9 +544,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.issueCommand = void 0;
 // We use any as a valid input type
 /* eslint-disable @typescript-eslint/no-explicit-any */
-const fs = __importStar(__nccwpck_require__(747));
-const os = __importStar(__nccwpck_require__(87));
-const utils_1 = __nccwpck_require__(278);
+const fs = __importStar(__nccwpck_require__(147));
+const os = __importStar(__nccwpck_require__(37));
+const utils_1 = __nccwpck_require__(587);
 function issueCommand(command, message) {
     const filePath = process.env[`GITHUB_${command}`];
     if (!filePath) {
@@ -1290,7 +564,7 @@ exports.issueCommand = issueCommand;
 
 /***/ }),
 
-/***/ 41:
+/***/ 511:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -1306,9 +580,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.OidcClient = void 0;
-const http_client_1 = __nccwpck_require__(255);
-const auth_1 = __nccwpck_require__(526);
-const core_1 = __nccwpck_require__(186);
+const http_client_1 = __nccwpck_require__(372);
+const auth_1 = __nccwpck_require__(9);
+const core_1 = __nccwpck_require__(26);
 class OidcClient {
     static createHttpClient(allowRetry = true, maxRetry = 10) {
         const requestOptions = {
@@ -1374,7 +648,7 @@ exports.OidcClient = OidcClient;
 
 /***/ }),
 
-/***/ 981:
+/***/ 519:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -1400,7 +674,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.toPlatformPath = exports.toWin32Path = exports.toPosixPath = void 0;
-const path = __importStar(__nccwpck_require__(622));
+const path = __importStar(__nccwpck_require__(17));
 /**
  * toPosixPath converts the given path to the posix form. On Windows, \\ will be
  * replaced with /.
@@ -1439,7 +713,7 @@ exports.toPlatformPath = toPlatformPath;
 
 /***/ }),
 
-/***/ 327:
+/***/ 800:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -1455,8 +729,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.summary = exports.markdownSummary = exports.SUMMARY_DOCS_URL = exports.SUMMARY_ENV_VAR = void 0;
-const os_1 = __nccwpck_require__(87);
-const fs_1 = __nccwpck_require__(747);
+const os_1 = __nccwpck_require__(37);
+const fs_1 = __nccwpck_require__(147);
 const { access, appendFile, writeFile } = fs_1.promises;
 exports.SUMMARY_ENV_VAR = 'GITHUB_STEP_SUMMARY';
 exports.SUMMARY_DOCS_URL = 'https://docs.github.com/actions/using-workflows/workflow-commands-for-github-actions#adding-a-job-summary';
@@ -1729,7 +1003,7 @@ exports.summary = _summary;
 
 /***/ }),
 
-/***/ 278:
+/***/ 587:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -1776,7 +1050,7 @@ exports.toCommandProperties = toCommandProperties;
 
 /***/ }),
 
-/***/ 514:
+/***/ 269:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -1811,8 +1085,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getExecOutput = exports.exec = void 0;
-const string_decoder_1 = __nccwpck_require__(304);
-const tr = __importStar(__nccwpck_require__(159));
+const string_decoder_1 = __nccwpck_require__(576);
+const tr = __importStar(__nccwpck_require__(330));
 /**
  * Exec a command.
  * Output will be streamed to the live console.
@@ -1886,7 +1160,7 @@ exports.getExecOutput = getExecOutput;
 
 /***/ }),
 
-/***/ 159:
+/***/ 330:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -1921,13 +1195,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.argStringToArray = exports.ToolRunner = void 0;
-const os = __importStar(__nccwpck_require__(87));
-const events = __importStar(__nccwpck_require__(614));
-const child = __importStar(__nccwpck_require__(129));
-const path = __importStar(__nccwpck_require__(622));
-const io = __importStar(__nccwpck_require__(436));
-const ioUtil = __importStar(__nccwpck_require__(962));
-const timers_1 = __nccwpck_require__(213);
+const os = __importStar(__nccwpck_require__(37));
+const events = __importStar(__nccwpck_require__(361));
+const child = __importStar(__nccwpck_require__(81));
+const path = __importStar(__nccwpck_require__(17));
+const io = __importStar(__nccwpck_require__(766));
+const ioUtil = __importStar(__nccwpck_require__(729));
+const timers_1 = __nccwpck_require__(512);
 /* eslint-disable @typescript-eslint/unbound-method */
 const IS_WINDOWS = process.platform === 'win32';
 /*
@@ -2511,7 +1785,7 @@ class ExecState extends events.EventEmitter {
 
 /***/ }),
 
-/***/ 526:
+/***/ 9:
 /***/ (function(__unused_webpack_module, exports) {
 
 "use strict";
@@ -2599,7 +1873,7 @@ exports.PersonalAccessTokenCredentialHandler = PersonalAccessTokenCredentialHand
 
 /***/ }),
 
-/***/ 255:
+/***/ 372:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -2635,10 +1909,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HttpClient = exports.isHttps = exports.HttpClientResponse = exports.HttpClientError = exports.getProxyUrl = exports.MediaTypes = exports.Headers = exports.HttpCodes = void 0;
-const http = __importStar(__nccwpck_require__(605));
-const https = __importStar(__nccwpck_require__(211));
-const pm = __importStar(__nccwpck_require__(835));
-const tunnel = __importStar(__nccwpck_require__(294));
+const http = __importStar(__nccwpck_require__(685));
+const https = __importStar(__nccwpck_require__(687));
+const pm = __importStar(__nccwpck_require__(623));
+const tunnel = __importStar(__nccwpck_require__(673));
 var HttpCodes;
 (function (HttpCodes) {
     HttpCodes[HttpCodes["OK"] = 200] = "OK";
@@ -3211,7 +2485,7 @@ const lowercaseKeys = (obj) => Object.keys(obj).reduce((c, k) => ((c[k.toLowerCa
 
 /***/ }),
 
-/***/ 835:
+/***/ 623:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -3279,7 +2553,7 @@ exports.checkBypass = checkBypass;
 
 /***/ }),
 
-/***/ 962:
+/***/ 729:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -3315,8 +2589,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getCmdPath = exports.tryGetExecutablePath = exports.isRooted = exports.isDirectory = exports.exists = exports.IS_WINDOWS = exports.unlink = exports.symlink = exports.stat = exports.rmdir = exports.rename = exports.readlink = exports.readdir = exports.mkdir = exports.lstat = exports.copyFile = exports.chmod = void 0;
-const fs = __importStar(__nccwpck_require__(747));
-const path = __importStar(__nccwpck_require__(622));
+const fs = __importStar(__nccwpck_require__(147));
+const path = __importStar(__nccwpck_require__(17));
 _a = fs.promises, exports.chmod = _a.chmod, exports.copyFile = _a.copyFile, exports.lstat = _a.lstat, exports.mkdir = _a.mkdir, exports.readdir = _a.readdir, exports.readlink = _a.readlink, exports.rename = _a.rename, exports.rmdir = _a.rmdir, exports.stat = _a.stat, exports.symlink = _a.symlink, exports.unlink = _a.unlink;
 exports.IS_WINDOWS = process.platform === 'win32';
 function exists(fsPath) {
@@ -3463,7 +2737,7 @@ exports.getCmdPath = getCmdPath;
 
 /***/ }),
 
-/***/ 436:
+/***/ 766:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -3498,11 +2772,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.findInPath = exports.which = exports.mkdirP = exports.rmRF = exports.mv = exports.cp = void 0;
-const assert_1 = __nccwpck_require__(357);
-const childProcess = __importStar(__nccwpck_require__(129));
-const path = __importStar(__nccwpck_require__(622));
-const util_1 = __nccwpck_require__(669);
-const ioUtil = __importStar(__nccwpck_require__(962));
+const assert_1 = __nccwpck_require__(491);
+const childProcess = __importStar(__nccwpck_require__(81));
+const path = __importStar(__nccwpck_require__(17));
+const util_1 = __nccwpck_require__(837);
+const ioUtil = __importStar(__nccwpck_require__(729));
 const exec = util_1.promisify(childProcess.exec);
 const execFile = util_1.promisify(childProcess.execFile);
 /**
@@ -3811,7 +3085,7 @@ function copyFile(srcFile, destFile, force) {
 
 /***/ }),
 
-/***/ 473:
+/***/ 239:
 /***/ (function(module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -3846,13 +3120,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports._readLinuxVersionFile = exports._getOsVersion = exports._findMatch = void 0;
-const semver = __importStar(__nccwpck_require__(562));
-const core_1 = __nccwpck_require__(186);
+const semver = __importStar(__nccwpck_require__(99));
+const core_1 = __nccwpck_require__(26);
 // needs to be require for core node modules to be mocked
 /* eslint @typescript-eslint/no-require-imports: 0 */
-const os = __nccwpck_require__(87);
-const cp = __nccwpck_require__(129);
-const fs = __nccwpck_require__(747);
+const os = __nccwpck_require__(37);
+const cp = __nccwpck_require__(81);
+const fs = __nccwpck_require__(147);
 function _findMatch(versionSpec, stable, candidates, archFilter) {
     return __awaiter(this, void 0, void 0, function* () {
         const platFilter = os.platform();
@@ -3946,7 +3220,7 @@ exports._readLinuxVersionFile = _readLinuxVersionFile;
 
 /***/ }),
 
-/***/ 279:
+/***/ 50:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -3981,7 +3255,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RetryHelper = void 0;
-const core = __importStar(__nccwpck_require__(186));
+const core = __importStar(__nccwpck_require__(26));
 /**
  * Internal class for retries
  */
@@ -4036,7 +3310,7 @@ exports.RetryHelper = RetryHelper;
 
 /***/ }),
 
-/***/ 784:
+/***/ 693:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -4074,20 +3348,20 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.evaluateVersions = exports.isExplicitVersion = exports.findFromManifest = exports.getManifestFromRepo = exports.findAllVersions = exports.find = exports.cacheFile = exports.cacheDir = exports.extractZip = exports.extractXar = exports.extractTar = exports.extract7z = exports.downloadTool = exports.HTTPError = void 0;
-const core = __importStar(__nccwpck_require__(186));
-const io = __importStar(__nccwpck_require__(436));
-const fs = __importStar(__nccwpck_require__(747));
-const mm = __importStar(__nccwpck_require__(473));
-const os = __importStar(__nccwpck_require__(87));
-const path = __importStar(__nccwpck_require__(622));
-const httpm = __importStar(__nccwpck_require__(255));
-const semver = __importStar(__nccwpck_require__(562));
-const stream = __importStar(__nccwpck_require__(413));
-const util = __importStar(__nccwpck_require__(669));
-const assert_1 = __nccwpck_require__(357);
-const v4_1 = __importDefault(__nccwpck_require__(468));
-const exec_1 = __nccwpck_require__(514);
-const retry_helper_1 = __nccwpck_require__(279);
+const core = __importStar(__nccwpck_require__(26));
+const io = __importStar(__nccwpck_require__(766));
+const fs = __importStar(__nccwpck_require__(147));
+const mm = __importStar(__nccwpck_require__(239));
+const os = __importStar(__nccwpck_require__(37));
+const path = __importStar(__nccwpck_require__(17));
+const httpm = __importStar(__nccwpck_require__(372));
+const semver = __importStar(__nccwpck_require__(99));
+const stream = __importStar(__nccwpck_require__(781));
+const util = __importStar(__nccwpck_require__(837));
+const assert_1 = __nccwpck_require__(491);
+const v4_1 = __importDefault(__nccwpck_require__(312));
+const exec_1 = __nccwpck_require__(269);
+const retry_helper_1 = __nccwpck_require__(50);
 class HTTPError extends Error {
     constructor(httpStatusCode) {
         super(`Unexpected HTTP response: ${httpStatusCode}`);
@@ -4708,7 +3982,7 @@ function _unique(values) {
 
 /***/ }),
 
-/***/ 562:
+/***/ 99:
 /***/ ((module, exports) => {
 
 exports = module.exports = SemVer
@@ -6311,7 +5585,7 @@ function coerce (version, options) {
 
 /***/ }),
 
-/***/ 701:
+/***/ 143:
 /***/ ((module) => {
 
 /**
@@ -6344,13 +5618,13 @@ module.exports = bytesToUuid;
 
 /***/ }),
 
-/***/ 269:
+/***/ 446:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 // Unique ID creation requires a high quality random # generator.  In node.js
 // this is pretty straight-forward - we use the crypto API.
 
-var crypto = __nccwpck_require__(417);
+var crypto = __nccwpck_require__(113);
 
 module.exports = function nodeRNG() {
   return crypto.randomBytes(16);
@@ -6359,11 +5633,11 @@ module.exports = function nodeRNG() {
 
 /***/ }),
 
-/***/ 468:
+/***/ 312:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-var rng = __nccwpck_require__(269);
-var bytesToUuid = __nccwpck_require__(701);
+var rng = __nccwpck_require__(446);
+var bytesToUuid = __nccwpck_require__(143);
 
 function v4(options, buf, offset) {
   var i = buf && offset || 0;
@@ -6395,27 +5669,27 @@ module.exports = v4;
 
 /***/ }),
 
-/***/ 294:
+/***/ 673:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-module.exports = __nccwpck_require__(219);
+module.exports = __nccwpck_require__(905);
 
 
 /***/ }),
 
-/***/ 219:
+/***/ 905:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-var net = __nccwpck_require__(631);
-var tls = __nccwpck_require__(16);
-var http = __nccwpck_require__(605);
-var https = __nccwpck_require__(211);
-var events = __nccwpck_require__(614);
-var assert = __nccwpck_require__(357);
-var util = __nccwpck_require__(669);
+var net = __nccwpck_require__(808);
+var tls = __nccwpck_require__(404);
+var http = __nccwpck_require__(685);
+var https = __nccwpck_require__(687);
+var events = __nccwpck_require__(361);
+var assert = __nccwpck_require__(491);
+var util = __nccwpck_require__(837);
 
 
 exports.httpOverHttp = httpOverHttp;
@@ -6675,7 +5949,736 @@ exports.debug = debug; // for test
 
 /***/ }),
 
-/***/ 357:
+/***/ 188:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.APPLICATION_NAME = exports.SYNOPSYS_BRIDGE_DEFAULT_PATH_LINUX = exports.SYNOPSYS_BRIDGE_DEFAULT_PATH_WINDOWS = exports.SYNOPSYS_BRIDGE_DEFAULT_PATH_MAC = void 0;
+exports.SYNOPSYS_BRIDGE_DEFAULT_PATH_MAC = '/synopsys-bridge'; //Path will be in home
+exports.SYNOPSYS_BRIDGE_DEFAULT_PATH_WINDOWS = '\\synopsys-bridge';
+exports.SYNOPSYS_BRIDGE_DEFAULT_PATH_LINUX = '/usr/synopsys-bridge';
+exports.APPLICATION_NAME = 'synopsys-action';
+
+
+/***/ }),
+
+/***/ 73:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.run = void 0;
+const core_1 = __nccwpck_require__(26);
+const tools_parameter_1 = __nccwpck_require__(430);
+const utility_1 = __nccwpck_require__(63);
+const synopsys_bridge_1 = __nccwpck_require__(25);
+const inputs = __importStar(__nccwpck_require__(5));
+const config_variables_1 = __nccwpck_require__(972);
+const download_utility_1 = __nccwpck_require__(198);
+const io_1 = __nccwpck_require__(766);
+function run() {
+    return __awaiter(this, void 0, void 0, function* () {
+        (0, core_1.info)('Synopsys Action started...');
+        const tempDir = yield (0, utility_1.createTempDir)();
+        let formattedCommand = '';
+        try {
+            // Automatically configure bridge if Bridge download url is provided
+            if (inputs.BRIDGE_DOWNLOAD_URL) {
+                if (!(0, synopsys_bridge_1.validateBridgeURL)(inputs.BRIDGE_DOWNLOAD_URL)) {
+                    return Promise.reject('Provided Bridge url is either not valid for the platform');
+                }
+                // Download file in temporary directory
+                (0, core_1.info)('Downloading and configuring Synopsys Bridge');
+                const downloadResponse = yield (0, download_utility_1.getRemoteFile)(tempDir, inputs.BRIDGE_DOWNLOAD_URL);
+                const extractZippedFilePath = inputs.SYNOPSYS_BRIDGE_PATH || (0, synopsys_bridge_1.getBridgeDefaultPath)();
+                // Clear the existing bridge, if available
+                yield (0, io_1.rmRF)(extractZippedFilePath);
+                yield (0, download_utility_1.extractZipped)(downloadResponse.filePath, extractZippedFilePath);
+                (0, core_1.info)('Download and configuration of Synopsys Bridge completed');
+            }
+            if (inputs.POLARIS_SERVER_URL) {
+                const polarisCommandFormatter = new tools_parameter_1.SynopsysToolsParameter(tempDir);
+                const polarisAssessmentTypes = JSON.parse(inputs.POLARIS_ASSESSMENT_TYPES);
+                formattedCommand = polarisCommandFormatter.getFormattedCommandForPolaris(inputs.POLARIS_ACCESS_TOKEN, inputs.POLARIS_APPLICATION_NAME, inputs.POLARIS_PROJECT_NAME, inputs.POLARIS_SERVER_URL, polarisAssessmentTypes);
+                (0, core_1.debug)('Formatted command is - '.concat(formattedCommand));
+            }
+            else {
+                formattedCommand = "";
+                if (inputs.COVERITY_URL) {
+                    const coverityCommandFormatter = new tools_parameter_1.SynopsysToolsParameter(tempDir);
+                    formattedCommand += coverityCommandFormatter.getFormattedCommandForCoverity(inputs.COVERITY_USER, inputs.COVERITY_PASSPHRASE, inputs.COVERITY_URL, inputs.COVERITY_PROJECT_NAME, inputs.COVERITY_STREAM_NAME, inputs.COVERITY_INSTALL_DIRECTORY, inputs.COVERITY_POLICY_VIEW, inputs.COVERITY_REPOSITORY_NAME, inputs.COVERITY_BRANCH_NAME);
+                }
+                if (inputs.BLACKDUCK_URL) {
+                    const blackDuckCommandFormatter = new tools_parameter_1.SynopsysToolsParameter(tempDir);
+                    let failureSeverities = [];
+                    if (inputs.BLACKDUCK_SCAN_FAILURE_SEVERITIES != null && inputs.BLACKDUCK_SCAN_FAILURE_SEVERITIES.length > 0) {
+                        try {
+                            failureSeverities = JSON.parse(inputs.BLACKDUCK_SCAN_FAILURE_SEVERITIES);
+                        }
+                        catch (error) {
+                            return Promise.reject('Provided value is not valid - BLACKDUCK_SCAN_FAILURE_SEVERITIES');
+                        }
+                    }
+                    formattedCommand += blackDuckCommandFormatter.getFormattedCommandForBlackduck(inputs.BLACKDUCK_URL, inputs.BLACKDUCK_API_TOKEN, inputs.BLACKDUCK_INSTALL_DIRECTORY, inputs.BLACKDUCK_SCAN_FULL, failureSeverities);
+                }
+                if (!inputs.COVERITY_URL && !inputs.BLACKDUCK_URL) {
+                    (0, core_1.warning)('Not supported flow');
+                    return Promise.reject(new Error('Not Supported Flow'));
+                }
+            }
+        }
+        catch (error) {
+            (0, core_1.debug)(error.stackTrace);
+            return Promise.reject(error);
+        }
+        try {
+            const sb = new synopsys_bridge_1.SynopsysBridge();
+            yield sb.executeBridgeCommand(formattedCommand, (0, config_variables_1.getWorkSpaceDirectory)()).catch(reason => {
+                throw reason;
+            });
+        }
+        catch (error) {
+            return Promise.reject(error);
+        }
+        finally {
+            yield (0, utility_1.cleanupTempDir)(tempDir);
+        }
+    });
+}
+exports.run = run;
+run().catch(error => {
+    (0, core_1.setFailed)('Workflow failed! '.concat(error.message));
+});
+
+
+/***/ }),
+
+/***/ 198:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.extractZipped = exports.getRemoteFile = void 0;
+const core_1 = __nccwpck_require__(26);
+const path_1 = __importDefault(__nccwpck_require__(17));
+const tool_cache_1 = __nccwpck_require__(693);
+const fs = __importStar(__nccwpck_require__(147));
+const utility_1 = __nccwpck_require__(63);
+const exec_1 = __nccwpck_require__(269);
+function getRemoteFile(destFilePath, url) {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (url == null || url.length === 0) {
+            return Promise.reject(new Error('URL cannot be empty'));
+        }
+        try {
+            let fileNameFromUrl = '';
+            if (fs.lstatSync(destFilePath).isDirectory()) {
+                fileNameFromUrl = url.substring(url.lastIndexOf('/') + 1);
+                destFilePath = path_1.default.join(destFilePath, fileNameFromUrl);
+            }
+            const toolPath = yield (0, tool_cache_1.downloadTool)(url, destFilePath);
+            const downloadFileResp = {
+                filePath: toolPath,
+                fileName: fileNameFromUrl
+            };
+            return Promise.resolve(downloadFileResp);
+        }
+        catch (error) {
+            return Promise.reject(error);
+        }
+    });
+}
+exports.getRemoteFile = getRemoteFile;
+function extractZipped(file, destinationPath) {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (file == null || file.length === 0) {
+            return Promise.reject(new Error('File does not exist'));
+        }
+        //Extract file name from file with full path
+        if (destinationPath == null || destinationPath.length === 0) {
+            return Promise.reject(new Error('No destination directory found'));
+        }
+        try {
+            if ((0, utility_1.checkIfGithubHostedAndLinux)()) {
+                yield (0, exec_1.exec)('sudo unzip '.concat(file).concat(' -d ').concat(destinationPath));
+            }
+            else {
+                yield (0, tool_cache_1.extractZip)(file, destinationPath);
+            }
+            (0, core_1.info)('Extraction complete.');
+            return Promise.resolve(true);
+        }
+        catch (error) {
+            return Promise.reject(error);
+        }
+    });
+}
+exports.extractZipped = extractZipped;
+
+
+/***/ }),
+
+/***/ 5:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BLACKDUCK_SCAN_FAILURE_SEVERITIES = exports.BLACKDUCK_SCAN_FULL = exports.BLACKDUCK_INSTALL_DIRECTORY = exports.BLACKDUCK_API_TOKEN = exports.BLACKDUCK_URL = exports.COVERITY_BRANCH_NAME = exports.COVERITY_REPOSITORY_NAME = exports.COVERITY_POLICY_VIEW = exports.COVERITY_INSTALL_DIRECTORY = exports.COVERITY_STREAM_NAME = exports.COVERITY_PROJECT_NAME = exports.COVERITY_PASSPHRASE = exports.COVERITY_USER = exports.COVERITY_URL = exports.POLARIS_SERVER_URL = exports.POLARIS_ASSESSMENT_TYPES = exports.POLARIS_PROJECT_NAME = exports.POLARIS_APPLICATION_NAME = exports.POLARIS_ACCESS_TOKEN = exports.BRIDGE_DOWNLOAD_URL = exports.SYNOPSYS_BRIDGE_PATH = void 0;
+const core_1 = __nccwpck_require__(26);
+exports.SYNOPSYS_BRIDGE_PATH = (0, core_1.getInput)('synopsys_bridge_path');
+//Bridge download url
+exports.BRIDGE_DOWNLOAD_URL = (0, core_1.getInput)('bridge_download_url');
+// Polaris related inputs
+exports.POLARIS_ACCESS_TOKEN = (0, core_1.getInput)('polaris_accessToken');
+exports.POLARIS_APPLICATION_NAME = (0, core_1.getInput)('polaris_application_name');
+exports.POLARIS_PROJECT_NAME = (0, core_1.getInput)('polaris_project_name');
+exports.POLARIS_ASSESSMENT_TYPES = (0, core_1.getInput)('polaris_assessment_types');
+exports.POLARIS_SERVER_URL = (0, core_1.getInput)('polaris_serverUrl');
+// Coverity related inputs
+exports.COVERITY_URL = (0, core_1.getInput)('coverity_url');
+exports.COVERITY_USER = (0, core_1.getInput)('coverity_user');
+exports.COVERITY_PASSPHRASE = (0, core_1.getInput)('coverity_passphrase');
+exports.COVERITY_PROJECT_NAME = (0, core_1.getInput)('coverity_project_name');
+exports.COVERITY_STREAM_NAME = (0, core_1.getInput)('coverity_stream_name');
+exports.COVERITY_INSTALL_DIRECTORY = (0, core_1.getInput)('coverity_install_directory');
+exports.COVERITY_POLICY_VIEW = (0, core_1.getInput)('coverity_policy_view');
+exports.COVERITY_REPOSITORY_NAME = (0, core_1.getInput)('coverity_repository_name');
+exports.COVERITY_BRANCH_NAME = (0, core_1.getInput)('coverity_branch_name');
+// Blackduck related inputs
+exports.BLACKDUCK_URL = (0, core_1.getInput)('blackduck_url');
+exports.BLACKDUCK_API_TOKEN = (0, core_1.getInput)('blackduck_apiToken');
+exports.BLACKDUCK_INSTALL_DIRECTORY = (0, core_1.getInput)('blackduck_install_directory');
+exports.BLACKDUCK_SCAN_FULL = (0, core_1.getInput)('blackduck_scan_full');
+exports.BLACKDUCK_SCAN_FAILURE_SEVERITIES = (0, core_1.getInput)('blackduck_scan_failure_severities');
+
+
+/***/ }),
+
+/***/ 25:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.validateBridgeURL = exports.getBridgeDefaultPath = exports.SynopsysBridge = void 0;
+const exec_1 = __nccwpck_require__(269);
+const inputs_1 = __nccwpck_require__(5);
+const core_1 = __nccwpck_require__(26);
+const application_constants_1 = __nccwpck_require__(188);
+const io_util_1 = __nccwpck_require__(729);
+const path_1 = __importDefault(__nccwpck_require__(17));
+const utility_1 = __nccwpck_require__(63);
+class SynopsysBridge {
+    constructor() {
+        this.bridgeExecutablePath = '';
+    }
+    checkIfSynopsysBridgeExists() {
+        return __awaiter(this, void 0, void 0, function* () {
+            let synopsysBridgePath = inputs_1.SYNOPSYS_BRIDGE_PATH;
+            const osName = process.platform;
+            if (!synopsysBridgePath) {
+                (0, core_1.info)('Synopsys Bridge path not found in configuration');
+                (0, core_1.info)('Looking for synopsys bridge in default path');
+                synopsysBridgePath = getBridgeDefaultPath();
+            }
+            if (osName === 'win32') {
+                this.bridgeExecutablePath = yield (0, io_util_1.tryGetExecutablePath)(synopsysBridgePath.concat('\\bridge'), ['.exe']);
+            }
+            else {
+                this.bridgeExecutablePath = yield (0, io_util_1.tryGetExecutablePath)(synopsysBridgePath.concat('/bridge'), []);
+            }
+            if (this.bridgeExecutablePath) {
+                (0, core_1.debug)('Bridge executable found at '.concat(synopsysBridgePath));
+                return true;
+            }
+            else {
+                (0, core_1.info)('Bridge executable could not be found at '.concat(synopsysBridgePath));
+            }
+            return false;
+        });
+    }
+    executeBridgeCommand(bridgeCommand, workingDirectory) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (yield this.checkIfSynopsysBridgeExists()) {
+                const osName = process.platform;
+                if (osName === 'darwin' || osName === 'linux' || osName === 'win32') {
+                    const exectOp = {
+                        cwd: workingDirectory
+                    };
+                    try {
+                        if ((0, utility_1.checkIfGithubHostedAndLinux)()) {
+                            return yield (0, exec_1.exec)('sudo '.concat(this.bridgeExecutablePath.concat(' ', bridgeCommand)), [], exectOp);
+                        }
+                        return yield (0, exec_1.exec)(this.bridgeExecutablePath.concat(' ', bridgeCommand), [], exectOp);
+                    }
+                    catch (error) {
+                        throw error;
+                    }
+                }
+            }
+            else {
+                throw new Error('Bridge could not be found');
+            }
+            return -1;
+        });
+    }
+}
+exports.SynopsysBridge = SynopsysBridge;
+function getBridgeDefaultPath() {
+    let bridgeDefaultPath = '';
+    const osName = process.platform;
+    if (osName === 'darwin') {
+        bridgeDefaultPath = path_1.default.join(process.env['HOME'], application_constants_1.SYNOPSYS_BRIDGE_DEFAULT_PATH_MAC);
+    }
+    else if (osName === 'linux') {
+        bridgeDefaultPath = application_constants_1.SYNOPSYS_BRIDGE_DEFAULT_PATH_LINUX;
+    }
+    else if (osName === 'win32') {
+        bridgeDefaultPath = path_1.default.join(process.env['USERPROFILE'], application_constants_1.SYNOPSYS_BRIDGE_DEFAULT_PATH_WINDOWS);
+    }
+    return bridgeDefaultPath;
+}
+exports.getBridgeDefaultPath = getBridgeDefaultPath;
+function validateBridgeURL(url) {
+    const osName = process.platform;
+    if (osName === 'darwin') {
+        return url.toLowerCase().includes('mac');
+    }
+    else if (osName === 'linux') {
+        return url.toLowerCase().includes('linux');
+    }
+    else if (osName === 'win32') {
+        return url.toLowerCase().includes('win');
+    }
+    return false;
+}
+exports.validateBridgeURL = validateBridgeURL;
+
+
+/***/ }),
+
+/***/ 430:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SynopsysToolsParameter = exports.BLACKDUCK_SCAN_FAILURE_SEVERITIES = exports.PolarisAssessmentType = void 0;
+const fs = __importStar(__nccwpck_require__(147));
+const path_1 = __importDefault(__nccwpck_require__(17));
+const core_1 = __nccwpck_require__(26);
+const validators_1 = __nccwpck_require__(305);
+var PolarisAssessmentType;
+(function (PolarisAssessmentType) {
+    PolarisAssessmentType["SCA"] = "SCA";
+    PolarisAssessmentType["SAST"] = "SAST";
+})(PolarisAssessmentType = exports.PolarisAssessmentType || (exports.PolarisAssessmentType = {}));
+var BLACKDUCK_SCAN_FAILURE_SEVERITIES;
+(function (BLACKDUCK_SCAN_FAILURE_SEVERITIES) {
+    BLACKDUCK_SCAN_FAILURE_SEVERITIES["ALL"] = "ALL";
+    BLACKDUCK_SCAN_FAILURE_SEVERITIES["NONE"] = "NONE";
+    BLACKDUCK_SCAN_FAILURE_SEVERITIES["BLOCKER"] = "BLOCKER";
+    BLACKDUCK_SCAN_FAILURE_SEVERITIES["CRITICAL"] = "CRITICAL";
+    BLACKDUCK_SCAN_FAILURE_SEVERITIES["MAJOR"] = "MAJOR";
+    BLACKDUCK_SCAN_FAILURE_SEVERITIES["MINOR"] = "MINOR";
+    BLACKDUCK_SCAN_FAILURE_SEVERITIES["OK"] = "OK";
+    BLACKDUCK_SCAN_FAILURE_SEVERITIES["TRIVIAL"] = "TRIVIAL";
+    BLACKDUCK_SCAN_FAILURE_SEVERITIES["UNSPECIFIED"] = "UNSPECIFIED";
+})(BLACKDUCK_SCAN_FAILURE_SEVERITIES = exports.BLACKDUCK_SCAN_FAILURE_SEVERITIES || (exports.BLACKDUCK_SCAN_FAILURE_SEVERITIES = {}));
+class SynopsysToolsParameter {
+    constructor(tempDir) {
+        this.tempDir = tempDir;
+    }
+    getFormattedCommandForPolaris(accessToken, applicationName, projectName, serverURL, assessmentTypes) {
+        (0, validators_1.validatePolarisParams)(accessToken, applicationName, projectName, serverURL, assessmentTypes);
+        const assessmentTypeEnums = [];
+        for (const assessmentType of assessmentTypes) {
+            if (!Object.values(PolarisAssessmentType).includes(assessmentType)) {
+                throw new Error('Provided Assessment type not found');
+            }
+            else {
+                assessmentTypeEnums.push(PolarisAssessmentType[assessmentType]);
+            }
+        }
+        const polData = {
+            data: {
+                polaris: {
+                    accesstoken: accessToken,
+                    serverUrl: serverURL,
+                    application: { name: applicationName },
+                    project: { name: projectName },
+                    assessment: { types: assessmentTypeEnums }
+                }
+            }
+        };
+        const inputJson = JSON.stringify(polData);
+        const stateFilePath = path_1.default.join(this.tempDir, SynopsysToolsParameter.STATE_FILE_NAME);
+        fs.writeFileSync(stateFilePath, inputJson);
+        (0, core_1.debug)('Generated state json file at - '.concat(stateFilePath));
+        (0, core_1.debug)('Generated state json file content is - '.concat(inputJson));
+        const command = SynopsysToolsParameter.STAGE_OPTION.concat(SynopsysToolsParameter.SPACE).concat(SynopsysToolsParameter.POLARIS_STAGE).concat(SynopsysToolsParameter.SPACE).concat(SynopsysToolsParameter.STATE_OPTION).concat(SynopsysToolsParameter.SPACE).concat(stateFilePath);
+        return command;
+    }
+    getFormattedCommandForCoverity(userName, passWord, coverityUrl, projectName, streamName, installDir, policyView, repositoryName, branchName) {
+        (0, validators_1.validateCoverityParams)(userName, passWord, coverityUrl, projectName, streamName);
+        const covData = {
+            data: {
+                coverity: {
+                    connect: {
+                        user: { name: userName, password: passWord },
+                        url: coverityUrl,
+                        project: { name: projectName },
+                        stream: { name: streamName }
+                    }
+                },
+                project: {}
+            }
+        };
+        if (installDir) {
+            const osName = process.platform;
+            if (osName === 'win32') {
+                (0, validators_1.validateCoverityInstallDirectoryParam)(installDir);
+            }
+            covData.data.coverity.install = { directory: installDir };
+        }
+        if (policyView) {
+            covData.data.coverity.connect.policy = { view: policyView };
+        }
+        if (repositoryName) {
+            covData.data.project.repository = { name: repositoryName };
+        }
+        if (repositoryName) {
+            covData.data.project.branch = { name: branchName };
+        }
+        const inputJson = JSON.stringify(covData);
+        const stateFilePath = path_1.default.join(this.tempDir, SynopsysToolsParameter.STATE_FILE_NAME);
+        fs.writeFileSync(stateFilePath, inputJson);
+        (0, core_1.debug)('Generated state json file at - '.concat(stateFilePath));
+        (0, core_1.debug)('Generated state json file content is - '.concat(inputJson));
+        const command = SynopsysToolsParameter.STAGE_OPTION.concat(SynopsysToolsParameter.SPACE).concat(SynopsysToolsParameter.COVERITY_STAGE).concat(SynopsysToolsParameter.SPACE).concat(SynopsysToolsParameter.STATE_OPTION).concat(SynopsysToolsParameter.SPACE).concat(stateFilePath).concat(SynopsysToolsParameter.SPACE).concat('--verbose').concat(SynopsysToolsParameter.SPACE); //'--stage polaris --state '.concat(stateFilePath)
+        return command;
+    }
+    getFormattedCommandForBlackduck(blackduckUrl, apiToken, installDirectory, scanFull, failureSeverities) {
+        (0, validators_1.validateBalckduckParams)(blackduckUrl, apiToken, installDirectory);
+        const blackduckData = {
+            data: {
+                blackduck: {
+                    url: blackduckUrl,
+                    token: apiToken
+                }
+            }
+        };
+        if (installDirectory) {
+            blackduckData.data.blackduck.install = { directory: installDirectory };
+        }
+        if (scanFull) {
+            let scanFullValue = false;
+            if (scanFull.toLowerCase() === 'true' || scanFull.toLowerCase() === 'false') {
+                scanFullValue = scanFull.toLowerCase() === 'true';
+            }
+            else {
+                throw new Error('boolean value is required for blackduck_scan_full');
+            }
+            blackduckData.data.blackduck.scan = { full: scanFullValue };
+        }
+        if (failureSeverities && failureSeverities.length > 0) {
+            (0, validators_1.validateBlackduckFailureSeverities)(failureSeverities);
+            const failureSeverityEnums = [];
+            for (const failureSeverity of failureSeverities) {
+                if (!Object.values(BLACKDUCK_SCAN_FAILURE_SEVERITIES).includes(failureSeverity)) {
+                    throw new Error('Provided Severity for blackduck is not valid');
+                }
+                else {
+                    failureSeverityEnums.push(BLACKDUCK_SCAN_FAILURE_SEVERITIES[failureSeverity]);
+                }
+            }
+            if (blackduckData.data.blackduck.scan) {
+                blackduckData.data.blackduck.scan.failure = { severities: failureSeverityEnums };
+            }
+            else {
+                blackduckData.data.blackduck.scan = { failure: { severities: failureSeverityEnums } };
+            }
+        }
+        const inputJson = JSON.stringify(blackduckData);
+        const stateFilePath = path_1.default.join(this.tempDir, SynopsysToolsParameter.STATE_FILE_NAME);
+        fs.writeFileSync(stateFilePath, inputJson);
+        (0, core_1.debug)('Generated state json file at - '.concat(stateFilePath));
+        (0, core_1.debug)('Generated state json file content is - '.concat(inputJson));
+        const command = SynopsysToolsParameter.STAGE_OPTION.concat(SynopsysToolsParameter.SPACE).concat(SynopsysToolsParameter.BLACKDUCK_STAGE).concat(SynopsysToolsParameter.SPACE).concat(SynopsysToolsParameter.STATE_OPTION).concat(SynopsysToolsParameter.SPACE).concat(stateFilePath).concat(SynopsysToolsParameter.SPACE);
+        return command;
+    }
+}
+exports.SynopsysToolsParameter = SynopsysToolsParameter;
+SynopsysToolsParameter.STAGE_OPTION = '--stage';
+SynopsysToolsParameter.STATE_OPTION = '--state';
+SynopsysToolsParameter.POLARIS_STAGE = 'polaris';
+SynopsysToolsParameter.STATE_FILE_NAME = 'input.json';
+// Coverity parameters
+SynopsysToolsParameter.COVERITY_STAGE = 'connect';
+SynopsysToolsParameter.SPACE = ' ';
+// Balckduck parameters
+SynopsysToolsParameter.BLACKDUCK_STAGE = 'blackduck';
+
+
+/***/ }),
+
+/***/ 63:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.checkIfGithubHostedAndLinux = exports.cleanupTempDir = exports.createTempDir = exports.cleanUrl = void 0;
+const fs = __importStar(__nccwpck_require__(147));
+const os = __importStar(__nccwpck_require__(37));
+const path_1 = __importDefault(__nccwpck_require__(17));
+const application_constants_1 = __nccwpck_require__(188);
+const io_1 = __nccwpck_require__(766);
+function cleanUrl(url) {
+    if (url && url.endsWith('/')) {
+        return url.slice(0, url.length - 1);
+    }
+    return url;
+}
+exports.cleanUrl = cleanUrl;
+function createTempDir() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const appPrefix = application_constants_1.APPLICATION_NAME;
+        const tempDir = fs.mkdtempSync(path_1.default.join(os.tmpdir(), appPrefix));
+        return tempDir;
+    });
+}
+exports.createTempDir = createTempDir;
+function cleanupTempDir(tempDir) {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (tempDir && fs.existsSync(tempDir)) {
+            yield (0, io_1.rmRF)(tempDir);
+        }
+    });
+}
+exports.cleanupTempDir = cleanupTempDir;
+function checkIfGithubHostedAndLinux() {
+    return String(process.env['RUNNER_NAME']).includes('Hosted Agent') && (process.platform === 'linux' || process.platform === 'darwin');
+}
+exports.checkIfGithubHostedAndLinux = checkIfGithubHostedAndLinux;
+
+
+/***/ }),
+
+/***/ 305:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.validateBlackduckFailureSeverities = exports.validateBalckduckParams = exports.validateCoverityInstallDirectoryParam = exports.validateCoverityParams = exports.validatePolarisParams = void 0;
+const fs = __importStar(__nccwpck_require__(147));
+function validatePolarisParams(accessToken, applicationName, projectName, serverURL, assessmentTypes) {
+    if (accessToken == null || accessToken.length === 0 || applicationName == null || applicationName.length === 0 || projectName == null || projectName.length === 0 || serverURL == null || serverURL.length === 0 || assessmentTypes.length === 0) {
+        throw new Error('One or more required parameters for Altair is missing');
+    }
+}
+exports.validatePolarisParams = validatePolarisParams;
+function validateCoverityParams(userName, passWord, coverityUrl, projectName, streamName) {
+    if (userName == null || userName.length === 0 || passWord == null || passWord.length === 0 || coverityUrl == null || coverityUrl.length === 0 || projectName == null || projectName.length === 0 || streamName == null || streamName.length === 0) {
+        throw new Error('One or more required parameters for Coverity is missing');
+    }
+}
+exports.validateCoverityParams = validateCoverityParams;
+function validateCoverityInstallDirectoryParam(installDir) {
+    if (installDir == null || installDir.length === 0) {
+        throw new Error('One or more required parameters for Coverity is missing');
+    }
+    if (!fs.existsSync(installDir)) {
+        throw new Error('Invalid Install Directory');
+    }
+}
+exports.validateCoverityInstallDirectoryParam = validateCoverityInstallDirectoryParam;
+function validateBalckduckParams(url, apiToken, installDirectory) {
+    if (url == null || url.length === 0 || apiToken == null || apiToken.length === 0 || installDirectory == null || installDirectory.length === 0) {
+        throw new Error('One or more required parameters for Coverity is missing');
+    }
+}
+exports.validateBalckduckParams = validateBalckduckParams;
+function validateBlackduckFailureSeverities(severities) {
+    if (severities == null || severities.length === 0) {
+        throw new Error('Provided value is not valid - BLACKDUCK_SCAN_FAILURE_SEVERITIES');
+    }
+}
+exports.validateBlackduckFailureSeverities = validateBlackduckFailureSeverities;
+
+
+/***/ }),
+
+/***/ 491:
 /***/ ((module) => {
 
 "use strict";
@@ -6683,7 +6686,7 @@ module.exports = require("assert");
 
 /***/ }),
 
-/***/ 129:
+/***/ 81:
 /***/ ((module) => {
 
 "use strict";
@@ -6691,7 +6694,7 @@ module.exports = require("child_process");
 
 /***/ }),
 
-/***/ 417:
+/***/ 113:
 /***/ ((module) => {
 
 "use strict";
@@ -6699,7 +6702,7 @@ module.exports = require("crypto");
 
 /***/ }),
 
-/***/ 614:
+/***/ 361:
 /***/ ((module) => {
 
 "use strict";
@@ -6707,7 +6710,7 @@ module.exports = require("events");
 
 /***/ }),
 
-/***/ 747:
+/***/ 147:
 /***/ ((module) => {
 
 "use strict";
@@ -6715,7 +6718,7 @@ module.exports = require("fs");
 
 /***/ }),
 
-/***/ 605:
+/***/ 685:
 /***/ ((module) => {
 
 "use strict";
@@ -6723,7 +6726,7 @@ module.exports = require("http");
 
 /***/ }),
 
-/***/ 211:
+/***/ 687:
 /***/ ((module) => {
 
 "use strict";
@@ -6731,7 +6734,7 @@ module.exports = require("https");
 
 /***/ }),
 
-/***/ 631:
+/***/ 808:
 /***/ ((module) => {
 
 "use strict";
@@ -6739,7 +6742,7 @@ module.exports = require("net");
 
 /***/ }),
 
-/***/ 87:
+/***/ 37:
 /***/ ((module) => {
 
 "use strict";
@@ -6747,7 +6750,7 @@ module.exports = require("os");
 
 /***/ }),
 
-/***/ 622:
+/***/ 17:
 /***/ ((module) => {
 
 "use strict";
@@ -6755,7 +6758,7 @@ module.exports = require("path");
 
 /***/ }),
 
-/***/ 413:
+/***/ 781:
 /***/ ((module) => {
 
 "use strict";
@@ -6763,7 +6766,7 @@ module.exports = require("stream");
 
 /***/ }),
 
-/***/ 304:
+/***/ 576:
 /***/ ((module) => {
 
 "use strict";
@@ -6771,7 +6774,7 @@ module.exports = require("string_decoder");
 
 /***/ }),
 
-/***/ 213:
+/***/ 512:
 /***/ ((module) => {
 
 "use strict";
@@ -6779,7 +6782,7 @@ module.exports = require("timers");
 
 /***/ }),
 
-/***/ 16:
+/***/ 404:
 /***/ ((module) => {
 
 "use strict";
@@ -6787,7 +6790,7 @@ module.exports = require("tls");
 
 /***/ }),
 
-/***/ 669:
+/***/ 837:
 /***/ ((module) => {
 
 "use strict";
@@ -6837,9 +6840,8 @@ module.exports = require("util");
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
 /******/ 	// This entry module is referenced by other modules so it can't be inlined
-/******/ 	var __webpack_exports__ = __nccwpck_require__(109);
+/******/ 	var __webpack_exports__ = __nccwpck_require__(73);
 /******/ 	module.exports = __webpack_exports__;
 /******/ 	
 /******/ })()
 ;
-//# sourceMappingURL=index.js.map
